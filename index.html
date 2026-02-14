@@ -1,302 +1,358 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Printer, 
-  Bluetooth, 
-  Users, 
-  School, 
-  FileText, 
-  Settings, 
-  ShieldCheck, 
-  Clock,
-  UserCheck,
-  RefreshCcw,
-  Smartphone
-} from 'lucide-react';
-
-const App = () => {
-  // State Utama - Mengambil data dari localStorage agar tetap ada meski offline
-  const [schoolName, setSchoolName] = useState(() => localStorage.getItem('school_name') || 'SMAN 1 PALU');
-  const [developerName, setDeveloperName] = useState(() => localStorage.getItem('dev_name') || 'Nama Anda');
-  const [student1, setStudent1] = useState('');
-  const [student2, setStudent2] = useState('');
-  const [reason, setReason] = useState('');
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  const [isConnected, setIsConnected] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [printCharacteristic, setPrintCharacteristic] = useState(null);
-
-  // Update Waktu Realtime
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Simpan pengaturan ke LocalStorage otomatis saat ada perubahan
-  useEffect(() => {
-    localStorage.setItem('school_name', schoolName);
-    localStorage.setItem('dev_name', developerName);
-  }, [schoolName, developerName]);
-
-  const handleReset = () => {
-    setStudent1('');
-    setStudent2('');
-    setReason('');
-  };
-
-  // Fungsi Koneksi Bluetooth (Web Bluetooth API)
-  const connectBluetooth = async () => {
-    try {
-      const device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
-      });
-      const server = await device.gatt.connect();
-      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-      setPrintCharacteristic(characteristic);
-      setIsConnected(true);
-      alert("Printer Berhasil Terhubung!");
-    } catch (error) {
-      console.error(error);
-      alert("Koneksi Bluetooth dibatalkan atau tidak didukung di browser ini.");
-    }
-  };
-
-  const handlePrint = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setIsPrinting(false);
-    }, 500);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-10">
-      {/* Header Bar */}
-      <header className="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="text-emerald-400" />
-            <h1 className="font-bold text-lg tracking-tight">E-IZIN PRO</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-            <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
-              {isConnected ? 'Online' : 'Offline Mode'}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Izin Pro | Sistem Struk Izin Sekolah</title>
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
-        {/* Kolom Kiri: Form Input */}
-        <section className="space-y-6">
-          
-          {/* Settings Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center gap-2 mb-4 text-slate-500">
-              <Settings size={18} />
-              <h2 className="text-sm font-bold uppercase tracking-wider">Pengaturan Aplikasi</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-400 mb-1 block">NAMA SEKOLAH</label>
-                <input 
-                  type="text" 
-                  value={schoolName}
-                  onChange={(e) => setSchoolName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-slate-400 mb-1 block">DEVELOPER / ADMIN</label>
-                <input 
-                  type="text" 
-                  value={developerName}
-                  onChange={(e) => setDeveloperName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Input Data Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 text-slate-500">
-                <Users size={18} />
-                <h2 className="text-sm font-bold uppercase tracking-wider">Input Siswa</h2>
-              </div>
-              <button onClick={handleReset} className="text-rose-500 hover:bg-rose-50 px-2 py-1 rounded text-xs flex items-center gap-1">
-                <RefreshCcw size={14} /> Reset
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="relative">
-                <div className="absolute left-3 top-3 text-slate-400 font-bold text-xs italic">1.</div>
-                <input 
-                  type="text" 
-                  placeholder="Nama Siswa Pertama..."
-                  value={student1}
-                  onChange={(e) => setStudent1(e.target.value)}
-                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div className="relative">
-                <div className="absolute left-3 top-3 text-slate-400 font-bold text-xs italic">2.</div>
-                <input 
-                  type="text" 
-                  placeholder="Nama Siswa Kedua (Opsional)..."
-                  value={student2}
-                  onChange={(e) => setStudent2(e.target.value)}
-                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <textarea 
-                  placeholder="Alasan Izin / Keperluan Keluar..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-24 text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3">
-              <button 
-                onClick={connectBluetooth}
-                className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
-              >
-                <Bluetooth size={18} />
-                {isConnected ? 'Printer Terhubung' : 'Konek Printer Bluetooth'}
-              </button>
-              <button 
-                onClick={handlePrint}
-                className="flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg"
-              >
-                <Printer size={18} />
-                CETAK STRUK IZIN
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Kolom Kanan: Preview */}
-        <section className="flex flex-col items-center">
-          <div className="w-full max-w-[320px]">
-            <div className="bg-slate-200 text-slate-500 text-[10px] font-bold py-1 px-4 rounded-t-lg text-center uppercase tracking-widest">
-              Live Preview (58mm)
-            </div>
-            
-            {/* The Actual Receipt */}
-            <div className="bg-white p-6 shadow-xl relative min-h-[450px] flex flex-col" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
-              
-              {/* Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
-                <div className="text-4xl font-black rotate-[-40deg] border-4 border-black p-2 text-center leading-none">
-                  IZIN SAH<br/>{developerName.toUpperCase()}
-                </div>
-              </div>
-
-              <div className="relative z-10 text-black">
-                {/* Header Struk */}
-                <div className="text-center mb-4">
-                  <h3 className="font-bold text-sm leading-tight uppercase underline">{schoolName}</h3>
-                  <p className="text-[10px] mt-1">SURAT IZIN KELUAR SEKOLAH</p>
-                  <p className="text-[10px] opacity-50 font-bold">==========================</p>
-                </div>
-
-                {/* Info Waktu */}
-                <div className="text-[10px] space-y-1 mb-4">
-                  <div className="flex justify-between">
-                    <span>TGL : {currentTime.toLocaleDateString('id-ID')}</span>
-                    <span>JAM: {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-                  <div className="flex justify-between font-bold">
-                    <span>STATUS:</span>
-                    <span>RESMI / VALID</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-dashed border-black my-3"></div>
-
-                {/* Body Siswa */}
-                <div className="text-[10px] space-y-3">
-                  <div>
-                    <span className="font-bold underline">NAMA SISWA:</span>
-                    <div className="mt-1 pl-2">1. {student1 || '_________________'}</div>
-                    {student2 && <div className="mt-1 pl-2">2. {student2}</div>}
-                  </div>
-                  <div>
-                    <span className="font-bold underline">KEPERLUAN:</span>
-                    <p className="mt-1 pl-2 italic leading-tight">
-                      {reason || '.....................'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border-t border-dashed border-black my-4"></div>
-
-                {/* Area Tanda Tangan */}
-                <div className="grid grid-cols-2 gap-2 text-[9px] text-center mt-4">
-                  <div>
-                    Petugas Keamanan,<br/><br/><br/><br/>
-                    ( ............ )
-                  </div>
-                  <div>
-                    Guru Piket,<br/><br/><br/><br/>
-                    ( ............ )
-                  </div>
-                </div>
-
-                {/* Footer Struk */}
-                <div className="mt-8 flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 border border-black flex flex-wrap p-1 opacity-80">
-                     {[...Array(64)].map((_, i) => (
-                       <div key={i} className={`w-[12.5%] h-[12.5%] ${Math.random() > 0.4 ? 'bg-black' : ''}`}></div>
-                     ))}
-                  </div>
-                  <p className="text-[8px] text-center uppercase font-bold tracking-tighter">
-                    VERIFIKASI SISTEM DIGITAL
-                  </p>
-                  <p className="text-[7px] mt-4 opacity-40">
-                    Sistem Developed by {developerName}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 bg-emerald-50 text-emerald-600 p-3 rounded-xl border border-emerald-100 flex items-center gap-3">
-              <Smartphone size={20} className="shrink-0" />
-              <p className="text-[11px] leading-tight font-medium">
-                Tip: Tekan titik tiga di pojok browser Chrome, lalu pilih <strong>"Instal Aplikasi"</strong> atau <strong>"Tambahkan ke Layar Utama"</strong> untuk akses offline lebih cepat.
-              </p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* CSS KHUSUS PRINT */}
-      <style>{`
-        @media print {
-          body { background: white !important; padding: 0 !important; margin: 0 !important; }
-          main > section:first-child, header, .bg-slate-200, .bg-emerald-50 { display: none !important; }
-          main { display: block !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-          section { display: block !important; width: 100% !important; }
-          .shadow-xl { box-shadow: none !important; }
-          div[style*="Courier New"] { 
-            width: 58mm !important; 
-            padding: 2mm !important; 
-            margin: 0 !important;
-            border: none !important;
-          }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
         }
-      `}</style>
-    </div>
-  );
-};
 
-export default App;
+        /* Desain Struk Thermal */
+        #thermal-receipt {
+            font-family: 'Courier New', Courier, monospace;
+            width: 300px;
+            min-height: 480px;
+            background: white;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-top: 10px solid #0f172a;
+            overflow: hidden;
+        }
+
+        .watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.04;
+            pointer-events: none;
+            transform: rotate(-35deg);
+            font-size: 2.8rem;
+            font-weight: 900;
+            text-align: center;
+            z-index: 0;
+        }
+
+        .receipt-edge {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background-image: linear-gradient(135deg, #f1f5f9 25%, transparent 25%), 
+                              linear-gradient(225deg, #f1f5f9 25%, transparent 25%);
+            background-position: 0 0;
+            background-size: 20px 20px;
+        }
+
+        @media print {
+            body { background: white !important; }
+            #ui-panel { display: none !important; }
+            #receipt-container { 
+                padding: 0 !important; 
+                margin: 0 !important;
+                display: block !important;
+            }
+            #thermal-receipt {
+                box-shadow: none !important;
+                border: none !important;
+                width: 58mm !important;
+                margin: 0 !important;
+                padding: 5mm !important;
+            }
+        }
+    </style>
+</head>
+<body class="pb-12">
+
+    <!-- Navbar -->
+    <nav id="ui-panel" class="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" class="text-emerald-400"></i>
+                <h1 class="font-bold text-lg tracking-wider">E-IZIN PRO</h1>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                <div id="bt-dot" class="h-2 w-2 rounded-full bg-rose-500"></div>
+                <span class="text-[10px] font-bold uppercase tracking-widest opacity-80" id="bt-text">Printer Disconnected</span>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-4 md:p-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
+        
+        <!-- INPUT SECTION -->
+        <section id="ui-panel" class="space-y-6">
+            <!-- Settings Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <div class="flex items-center gap-2 mb-5 text-slate-400">
+                    <i data-lucide="settings-2" size="18"></i>
+                    <h2 class="text-xs font-bold uppercase tracking-widest">Pengaturan Instansi</h2>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 mb-1 block">NAMA SEKOLAH</label>
+                        <div class="relative">
+                            <i data-lucide="school" class="absolute left-3 top-2.5 text-slate-400" size="16"></i>
+                            <input type="text" id="in-school" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 mb-1 block">ADMIN / DEVELOPER</label>
+                        <div class="relative">
+                            <i data-lucide="user-check" class="absolute left-3 top-2.5 text-slate-400" size="16"></i>
+                            <input type="text" id="in-dev" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Data Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="flex items-center gap-2 text-slate-400">
+                        <i data-lucide="clipboard-list" size="18"></i>
+                        <h2 class="text-xs font-bold uppercase tracking-widest">Detail Izin</h2>
+                    </div>
+                    <button id="btn-reset" class="text-rose-500 hover:bg-rose-50 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-2 transition-all">
+                        <i data-lucide="rotate-ccw" size="14"></i> RESET
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="relative">
+                        <input type="text" id="in-name1" placeholder="Nama Siswa 1..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-inner">
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="in-name2" placeholder="Nama Siswa 2 (Opsional)..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-inner">
+                    </div>
+                    <textarea id="in-reason" placeholder="Keperluan / Alasan..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-28 resize-none shadow-inner"></textarea>
+                </div>
+
+                <div class="mt-8 flex flex-col gap-3">
+                    <button id="btn-bluetooth" class="flex items-center justify-center gap-3 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all active:scale-[0.97] shadow-lg shadow-blue-100">
+                        <i data-lucide="bluetooth" size="20"></i> HUBUNGKAN PRINTER
+                    </button>
+                    <button id="btn-print" class="flex items-center justify-center gap-3 py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all active:scale-[0.97] shadow-xl shadow-slate-200">
+                        <i data-lucide="printer" size="20"></i> CETAK STRUK SEKARANG
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- RECEIPT PREVIEW SECTION -->
+        <section id="receipt-container" class="flex flex-col items-center">
+            <div class="mb-5 text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-3">
+                <span class="h-[1px] w-12 bg-slate-200"></span>
+                Receipt Preview
+                <span class="h-[1px] w-12 bg-slate-200"></span>
+            </div>
+
+            <div id="thermal-receipt">
+                <!-- Watermark Layer -->
+                <div class="watermark" id="view-watermark">IZIN SAH</div>
+                
+                <div class="relative z-10 text-black">
+                    <!-- Receipt Header -->
+                    <div class="text-center mb-5">
+                        <h3 id="view-school" class="font-bold text-[13px] uppercase underline leading-tight tracking-tight">NAMA SEKOLAH ANDA</h3>
+                        <p class="text-[10px] mt-1 font-bold">SURAT IZIN KELUAR</p>
+                        <p class="text-[10px] opacity-40">----------------------------</p>
+                    </div>
+
+                    <!-- Meta Data -->
+                    <div class="text-[10px] space-y-1 mb-5">
+                        <div class="flex justify-between">
+                            <span>TANGGAL : <span id="view-date">--/--/--</span></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>WAKTU   : <span id="view-time">00:00</span></span>
+                        </div>
+                        <div class="flex justify-between font-bold mt-1">
+                            <span>VERIFIKASI:</span>
+                            <span>VALID DIGITAL</span>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+
+                    <!-- Student & Reason -->
+                    <div class="text-[10px] space-y-4">
+                        <div>
+                            <span class="font-bold underline">DAFTAR SISWA:</span>
+                            <div class="mt-2 pl-1 flex gap-2">
+                                <span>1.</span>
+                                <span id="view-name1" class="font-bold">____________________</span>
+                            </div>
+                            <div class="mt-1 pl-1 flex gap-2" id="view-row-name2">
+                                <span>2.</span>
+                                <span id="view-name2" class="font-bold">____________________</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="font-bold underline uppercase">Alasan Keluar:</span>
+                            <p id="view-reason" class="mt-2 pl-1 italic leading-relaxed text-[10px]">
+                                Menunggu input data...
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px dashed #000; margin: 25px 0 5px 0;"></div>
+
+                    <!-- Single Signature Section -->
+                    <div class="mt-6 flex flex-col items-end text-[10px]">
+                        <div class="text-center w-32">
+                            Guru Piket,<br><br><br><br><br>
+                            ( ................ )
+                        </div>
+                    </div>
+
+                    <!-- Footer Section -->
+                    <div class="mt-12 flex flex-col items-center gap-3">
+                        <!-- QR Simulation -->
+                        <div id="qr-box" class="w-16 h-16 border border-black p-1 flex flex-wrap opacity-90 bg-white">
+                        </div>
+                        <p class="text-[9px] font-bold tracking-tighter uppercase">Verifikasi Keaslian Sistem</p>
+                        <div class="text-[7px] mt-6 opacity-40 text-center uppercase leading-tight">
+                            Powered by E-Izin Pro<br>
+                            Sistem Oleh: <span id="view-dev" class="font-bold">Developer</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="receipt-edge"></div>
+            </div>
+
+            <div class="mt-8 bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-2 animate-pulse no-print">
+                <i data-lucide="check-circle-2" size="16"></i> Sistem Siap Cetak
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // DOM Elements
+        const inputs = {
+            school: document.getElementById('in-school'),
+            dev: document.getElementById('in-dev'),
+            name1: document.getElementById('in-name1'),
+            name2: document.getElementById('in-name2'),
+            reason: document.getElementById('in-reason')
+        };
+
+        const views = {
+            school: document.getElementById('view-school'),
+            dev: document.getElementById('view-dev'),
+            name1: document.getElementById('view-name1'),
+            name2: document.getElementById('view-name2'),
+            rowName2: document.getElementById('view-row-name2'),
+            reason: document.getElementById('view-reason'),
+            date: document.getElementById('view-date'),
+            time: document.getElementById('view-time'),
+            watermark: document.getElementById('view-watermark'),
+            qr: document.getElementById('qr-box'),
+            btDot: document.getElementById('bt-dot'),
+            btText: document.getElementById('bt-text')
+        };
+
+        // Initialize App
+        function init() {
+            // Load from LocalStorage
+            inputs.school.value = localStorage.getItem('e_izin_school') || 'NAMA SEKOLAH ANDA';
+            inputs.dev.value = localStorage.getItem('e_izin_dev') || 'NAMA ANDA';
+            
+            updatePreview();
+            generateQR();
+            lucide.createIcons();
+        }
+
+        // Live Update Function
+        function updatePreview() {
+            const now = new Date();
+            
+            views.school.innerText = inputs.school.value || 'NAMA SEKOLAH ANDA';
+            views.dev.innerText = inputs.dev.value || 'Developer';
+            views.name1.innerText = inputs.name1.value || '____________________';
+            views.name2.innerText = inputs.name2.value || '____________________';
+            views.reason.innerText = inputs.reason.value || 'Menunggu input data...';
+            
+            // Format Date & Time
+            views.date.innerText = now.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            views.time.innerText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + " WITA";
+            
+            // Sync Watermark
+            const wm = `IZIN SAH\n${(inputs.dev.value || 'DEVELOPER').toUpperCase()}`;
+            views.watermark.innerText = wm;
+
+            // Visibility Logic for Student 2
+            views.rowName2.style.display = inputs.name2.value ? 'flex' : 'none';
+
+            // Save Persistence
+            localStorage.setItem('e_izin_school', inputs.school.value);
+            localStorage.setItem('e_izin_dev', inputs.dev.value);
+        }
+
+        // Generate Simulated QR
+        function generateQR() {
+            views.qr.innerHTML = '';
+            for(let i=0; i<144; i++) {
+                const dot = document.createElement('div');
+                dot.style.width = '8.33%';
+                dot.style.height = '8.33%';
+                dot.style.backgroundColor = Math.random() > 0.45 ? 'black' : 'transparent';
+                views.qr.appendChild(dot);
+            }
+        }
+
+        // Bluetooth Simulation
+        async function handleBluetooth() {
+            try {
+                // Mencari printer bluetooth (Hanya jalan di browser yang support & HTTPS)
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+                });
+                views.btDot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
+                views.btText.innerText = "Printer Connected";
+                alert("Berhasil terhubung ke Printer Thermal!");
+            } catch (err) {
+                alert("Koneksi Bluetooth dibatalkan atau tidak didukung pada browser ini.");
+            }
+        }
+
+        // Event Listeners
+        Object.values(inputs).forEach(el => {
+            el.addEventListener('input', updatePreview);
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            inputs.name1.value = '';
+            inputs.name2.value = '';
+            inputs.reason.value = '';
+            updatePreview();
+        });
+
+        document.getElementById('btn-print').addEventListener('click', () => {
+            if(!inputs.name1.value) {
+                alert("Tolong isi minimal satu nama siswa!");
+                return;
+            }
+            window.print();
+        });
+
+        document.getElementById('btn-bluetooth').addEventListener('click', handleBluetooth);
+
+        // Run On Load
+        window.onload = init;
+    </script>
+</body>
+</html>
 
