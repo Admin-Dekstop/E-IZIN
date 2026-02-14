@@ -1,0 +1,302 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Printer, 
+  Bluetooth, 
+  Users, 
+  School, 
+  FileText, 
+  Settings, 
+  ShieldCheck, 
+  Clock,
+  UserCheck,
+  RefreshCcw,
+  Smartphone
+} from 'lucide-react';
+
+const App = () => {
+  // State Utama - Mengambil data dari localStorage agar tetap ada meski offline
+  const [schoolName, setSchoolName] = useState(() => localStorage.getItem('school_name') || 'SMAN 1 PALU');
+  const [developerName, setDeveloperName] = useState(() => localStorage.getItem('dev_name') || 'Nama Anda');
+  const [student1, setStudent1] = useState('');
+  const [student2, setStudent2] = useState('');
+  const [reason, setReason] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  const [isConnected, setIsConnected] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printCharacteristic, setPrintCharacteristic] = useState(null);
+
+  // Update Waktu Realtime
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Simpan pengaturan ke LocalStorage otomatis saat ada perubahan
+  useEffect(() => {
+    localStorage.setItem('school_name', schoolName);
+    localStorage.setItem('dev_name', developerName);
+  }, [schoolName, developerName]);
+
+  const handleReset = () => {
+    setStudent1('');
+    setStudent2('');
+    setReason('');
+  };
+
+  // Fungsi Koneksi Bluetooth (Web Bluetooth API)
+  const connectBluetooth = async () => {
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }]
+      });
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+      const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+      setPrintCharacteristic(characteristic);
+      setIsConnected(true);
+      alert("Printer Berhasil Terhubung!");
+    } catch (error) {
+      console.error(error);
+      alert("Koneksi Bluetooth dibatalkan atau tidak didukung di browser ini.");
+    }
+  };
+
+  const handlePrint = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 500);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans pb-10">
+      {/* Header Bar */}
+      <header className="bg-slate-900 text-white p-4 sticky top-0 z-50 shadow-md">
+        <div className="max-w-4xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="text-emerald-400" />
+            <h1 className="font-bold text-lg tracking-tight">E-IZIN PRO</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+            <span className="text-[10px] font-medium uppercase tracking-widest opacity-70">
+              {isConnected ? 'Online' : 'Offline Mode'}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-4xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* Kolom Kiri: Form Input */}
+        <section className="space-y-6">
+          
+          {/* Settings Card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2 mb-4 text-slate-500">
+              <Settings size={18} />
+              <h2 className="text-sm font-bold uppercase tracking-wider">Pengaturan Aplikasi</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 mb-1 block">NAMA SEKOLAH</label>
+                <input 
+                  type="text" 
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 mb-1 block">DEVELOPER / ADMIN</label>
+                <input 
+                  type="text" 
+                  value={developerName}
+                  onChange={(e) => setDeveloperName(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Input Data Card */}
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Users size={18} />
+                <h2 className="text-sm font-bold uppercase tracking-wider">Input Siswa</h2>
+              </div>
+              <button onClick={handleReset} className="text-rose-500 hover:bg-rose-50 px-2 py-1 rounded text-xs flex items-center gap-1">
+                <RefreshCcw size={14} /> Reset
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <div className="absolute left-3 top-3 text-slate-400 font-bold text-xs italic">1.</div>
+                <input 
+                  type="text" 
+                  placeholder="Nama Siswa Pertama..."
+                  value={student1}
+                  onChange={(e) => setStudent1(e.target.value)}
+                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                />
+              </div>
+              <div className="relative">
+                <div className="absolute left-3 top-3 text-slate-400 font-bold text-xs italic">2.</div>
+                <input 
+                  type="text" 
+                  placeholder="Nama Siswa Kedua (Opsional)..."
+                  value={student2}
+                  onChange={(e) => setStudent2(e.target.value)}
+                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <textarea 
+                  placeholder="Alasan Izin / Keperluan Keluar..."
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none h-24 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <button 
+                onClick={connectBluetooth}
+                className={`flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all ${isConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+              >
+                <Bluetooth size={18} />
+                {isConnected ? 'Printer Terhubung' : 'Konek Printer Bluetooth'}
+              </button>
+              <button 
+                onClick={handlePrint}
+                className="flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-black active:scale-[0.98] transition-all shadow-lg"
+              >
+                <Printer size={18} />
+                CETAK STRUK IZIN
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Kolom Kanan: Preview */}
+        <section className="flex flex-col items-center">
+          <div className="w-full max-w-[320px]">
+            <div className="bg-slate-200 text-slate-500 text-[10px] font-bold py-1 px-4 rounded-t-lg text-center uppercase tracking-widest">
+              Live Preview (58mm)
+            </div>
+            
+            {/* The Actual Receipt */}
+            <div className="bg-white p-6 shadow-xl relative min-h-[450px] flex flex-col" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
+              
+              {/* Watermark */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] pointer-events-none select-none z-0">
+                <div className="text-4xl font-black rotate-[-40deg] border-4 border-black p-2 text-center leading-none">
+                  IZIN SAH<br/>{developerName.toUpperCase()}
+                </div>
+              </div>
+
+              <div className="relative z-10 text-black">
+                {/* Header Struk */}
+                <div className="text-center mb-4">
+                  <h3 className="font-bold text-sm leading-tight uppercase underline">{schoolName}</h3>
+                  <p className="text-[10px] mt-1">SURAT IZIN KELUAR SEKOLAH</p>
+                  <p className="text-[10px] opacity-50 font-bold">==========================</p>
+                </div>
+
+                {/* Info Waktu */}
+                <div className="text-[10px] space-y-1 mb-4">
+                  <div className="flex justify-between">
+                    <span>TGL : {currentTime.toLocaleDateString('id-ID')}</span>
+                    <span>JAM: {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div className="flex justify-between font-bold">
+                    <span>STATUS:</span>
+                    <span>RESMI / VALID</span>
+                  </div>
+                </div>
+
+                <div className="border-t border-dashed border-black my-3"></div>
+
+                {/* Body Siswa */}
+                <div className="text-[10px] space-y-3">
+                  <div>
+                    <span className="font-bold underline">NAMA SISWA:</span>
+                    <div className="mt-1 pl-2">1. {student1 || '_________________'}</div>
+                    {student2 && <div className="mt-1 pl-2">2. {student2}</div>}
+                  </div>
+                  <div>
+                    <span className="font-bold underline">KEPERLUAN:</span>
+                    <p className="mt-1 pl-2 italic leading-tight">
+                      {reason || '.....................'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t border-dashed border-black my-4"></div>
+
+                {/* Area Tanda Tangan */}
+                <div className="grid grid-cols-2 gap-2 text-[9px] text-center mt-4">
+                  <div>
+                    Petugas Keamanan,<br/><br/><br/><br/>
+                    ( ............ )
+                  </div>
+                  <div>
+                    Guru Piket,<br/><br/><br/><br/>
+                    ( ............ )
+                  </div>
+                </div>
+
+                {/* Footer Struk */}
+                <div className="mt-8 flex flex-col items-center gap-2">
+                  <div className="w-12 h-12 border border-black flex flex-wrap p-1 opacity-80">
+                     {[...Array(64)].map((_, i) => (
+                       <div key={i} className={`w-[12.5%] h-[12.5%] ${Math.random() > 0.4 ? 'bg-black' : ''}`}></div>
+                     ))}
+                  </div>
+                  <p className="text-[8px] text-center uppercase font-bold tracking-tighter">
+                    VERIFIKASI SISTEM DIGITAL
+                  </p>
+                  <p className="text-[7px] mt-4 opacity-40">
+                    Sistem Developed by {developerName}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-emerald-50 text-emerald-600 p-3 rounded-xl border border-emerald-100 flex items-center gap-3">
+              <Smartphone size={20} className="shrink-0" />
+              <p className="text-[11px] leading-tight font-medium">
+                Tip: Tekan titik tiga di pojok browser Chrome, lalu pilih <strong>"Instal Aplikasi"</strong> atau <strong>"Tambahkan ke Layar Utama"</strong> untuk akses offline lebih cepat.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* CSS KHUSUS PRINT */}
+      <style>{`
+        @media print {
+          body { background: white !important; padding: 0 !important; margin: 0 !important; }
+          main > section:first-child, header, .bg-slate-200, .bg-emerald-50 { display: none !important; }
+          main { display: block !important; padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+          section { display: block !important; width: 100% !important; }
+          .shadow-xl { box-shadow: none !important; }
+          div[style*="Courier New"] { 
+            width: 58mm !important; 
+            padding: 2mm !important; 
+            margin: 0 !important;
+            border: none !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default App;
+
